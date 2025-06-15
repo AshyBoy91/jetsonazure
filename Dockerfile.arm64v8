@@ -1,0 +1,34 @@
+FROM arm64v8/python:3.8-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies specific to ARM64/Jetson
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    procps \
+    lsb-release \
+    gnupg2 \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better layer caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create a non-root user
+RUN useradd -m -u 10001 moduleuser
+USER moduleuser
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Run the IoT Edge module
+CMD ["python", "iot_edge_main.py"] 

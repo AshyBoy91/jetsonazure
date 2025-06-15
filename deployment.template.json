@@ -1,0 +1,110 @@
+{
+  "$schema-version": "0.0.1",
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.1",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {}
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.4",
+              "createOptions": {}
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.4",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "5671/tcp": [
+                      {
+                        "HostPort": "5671"
+                      }
+                    ],
+                    "8883/tcp": [
+                      {
+                        "HostPort": "8883"
+                      }
+                    ],
+                    "443/tcp": [
+                      {
+                        "HostPort": "443"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "modules": {
+          "JetsonMonitorModule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.JetsonMonitorModule}",
+              "createOptions": {
+                "HostConfig": {
+                  "Privileged": true,
+                  "NetworkMode": "host",
+                  "Binds": [
+                    "/sys:/sys:ro",
+                    "/proc:/proc:ro"
+                  ]
+                },
+                "Env": [
+                  "LOCAL_PROCESSING_ENABLED=true",
+                  "CPU_ALERT_THRESHOLD=80.0",
+                  "MEMORY_ALERT_THRESHOLD=85.0",
+                  "TEMP_ALERT_THRESHOLD=70.0",
+                  "DISK_ALERT_THRESHOLD=90.0",
+                  "LOG_LEVEL=INFO"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.2",
+        "routes": {
+          "JetsonMonitorModuleToIoTHub": "FROM /messages/modules/JetsonMonitorModule/outputs/* INTO $upstream",
+          "sensorToJetsonMonitorModule": "FROM /messages/modules/tempSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/JetsonMonitorModule/inputs/input1\")"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    },
+    "JetsonMonitorModule": {
+      "properties.desired": {
+        "telemetry_interval": 30,
+        "local_processing_enabled": true,
+        "alert_thresholds": {
+          "cpu_threshold": 80.0,
+          "memory_threshold": 85.0,
+          "temperature_threshold": 70.0,
+          "disk_threshold": 90.0
+        },
+        "auto_update_enabled": false
+      }
+    }
+  }
+} 
